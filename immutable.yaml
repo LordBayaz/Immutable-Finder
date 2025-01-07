@@ -1,0 +1,29 @@
+name: Hunt.ImmutableProcesses
+type: VQL
+description: >
+  Identify processes interacting with files that have the immutable bit set.
+artifacts:
+  - name: Artifact.ImmutableFilesAndProcesses
+    parameters: []
+    sources:
+      - type: VQL
+        vql: |
+          LET ImmutableFiles = SELECT
+            file.path AS file_path,
+            file.attributes AS attributes
+          FROM glob(glob="/**", accessor="basic", case_sensitive=false, max_depth=20)
+          WHERE "immutable" IN file.attributes
+
+          LET ImmutableProcesses = SELECT
+            process.pid AS pid,
+            process.name AS name,
+            process.cmdline AS cmdline,
+            process.owner AS owner,
+            fd.path AS file
+          FROM pslist() AS process
+          JOIN foreach(process.fd) AS fd
+          WHERE fd.path IN ImmutableFiles.file_path
+
+          SELECT * FROM ImmutableFiles
+          UNION
+          SELECT * FROM ImmutableProcesses
