@@ -1,29 +1,9 @@
-name: Hunt.ImmutableProcesses
-type: VQL
-description: >
-  Identify processes interacting with files that have the immutable bit set.
+description: This artifact executes a pre-written Bash script stored in UAC's /bin/linux directory to check running processes for files with the immutable bit set.
+output_directory: /live_response/process
 artifacts:
-  - name: Artifact.ImmutableFilesAndProcesses
-    parameters: []
-    sources:
-      - type: VQL
-        vql: |
-          LET ImmutableFiles = SELECT
-            file.path AS file_path,
-            file.attributes AS attributes
-          FROM glob(glob="/**", accessor="basic", case_sensitive=false, max_depth=20)
-          WHERE "immutable" IN file.attributes
-
-          LET ImmutableProcesses = SELECT
-            process.pid AS pid,
-            process.name AS name,
-            process.cmdline AS cmdline,
-            process.owner AS owner,
-            fd.path AS file
-          FROM pslist() AS process
-          JOIN foreach(process.fd) AS fd
-          WHERE fd.path IN ImmutableFiles.file_path
-
-          SELECT * FROM ImmutableFiles
-          UNION
-          SELECT * FROM ImmutableProcesses
+  -
+    description: Execute the immutable processes detection script in /bin/linux.
+    supported_os: [linux]
+    collector: command
+    command: immutable.sh
+    output_file: immutable.txt
